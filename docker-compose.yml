@@ -1,0 +1,90 @@
+version: "3.7"
+
+services:
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:${ELASTIC_VERSION:-6.5.0}
+    hostname: "{{.Node.Hostname}}-elasticsearch"
+    environment:
+      - discovery.zen.ping.unicast.hosts=elasticsearch
+      - discovery.zen.minimum_master_nodes=3
+      - ELASTIC_PASSWORD=${ELASTICSEARCH_PASSWORD:-changeme}
+      - xpack.security.enabled=true
+      - xpack.monitoring.collection.enabled=true
+      - xpack.license.self_generated.type=trial
+      - cluster.name=DevOps
+      - node.name={{.Node.Hostname}}-elasticsearch
+      - network.host=0.0.0.0
+    networks:
+      - elastic
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch:/usr/share/elasticsearch/data
+    deploy:
+      mode: 'global'
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:${ELASTIC_VERSION:-6.5.0}
+    hostname: "{{.Node.Hostname}}-logstash"
+    environment:
+      - XPACK_MONITORING_ELASTICSEARCH_URL=http://elasticsearch:9200
+      - XPACK_MONITORING_ELASTICSEARCH_USERNAME=${ELASTICSEARCH_USERNAME:-elastic}
+      - XPACK_MONITORING_ELASTICSEARCH_PASSWORD=${ELASTICSEARCH_PASSWORD:-changeme}
+    networks:
+      - elastic
+    deploy:
+      replicas: 2
+      labels:
+        - 'traefik.port=5044'
+        - 'traefik.frontend.rule=Host:192.227.93.136;Path:/logstash'
+        - 'traefik.backend.loadbalancer.stickiness=true'
+    configs:
+      - source: ls_config
+        target: /usr/share/logstash/pipeline/logstash.conf
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:${ELASTIC_VERSION:-6.5.0}
+    hostname: "{{.Node.Hostname}}-kibana"
+    environment:
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - ELASTICSEARCH_USERNAME=${ELASTICSEARCH_USERNAME:-elastic}
+      - ELASTICSEARCH_PASSWORD=${ELASTICSEARCH_PASSWORD:-changeme}
+      - SERVER_NAME="{{.Node.Hostname}}-kibana"
+    networks:
+      - elastic
+    volumes:
+      - kibana:/usr/share/kibana/data
+    deploy:
+      replicas: 2
+      labels:
+        - 'traefik.port=5601'
+        - 'traefik.frontend.rule=Host:192.227.93.136'
+        - 'traefik.backend.loadbalancer.stickiness=true'
+
+  traefik:
+    image: traefik:v1.7.8
+    hostname: "{{.Node.Hostname}}-traefik"
+    command: --docker --docker.swarmmode --docker.domain=192.227.93.136 --docker.watch --logLevel=DEBUG --web
+    networks:
+      - elastic
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
+    volumes:
+      - type: bind
+        source: /var/run/docker.sock
+        target: /var/run/docker.sock
+
+networks:
+    elastic:
+      external: true
+
+volumes:
+  elasticsearch:
+  kibana:
+
+configs:
+  ls_config:
+    file: $PWD/logstash.conf
