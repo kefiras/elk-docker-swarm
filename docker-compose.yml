@@ -22,7 +22,7 @@ services:
     volumes:
       - elasticsearch:/usr/share/elasticsearch/data
     deploy:
-      mode: 'global'
+      replicas: 3
 
   logstash:
     image: docker.elastic.co/logstash/logstash:${ELASTIC_VERSION:-6.5.0}
@@ -36,9 +36,11 @@ services:
     deploy:
       replicas: 2
       labels:
-        - 'traefik.port=5044'
-        - 'traefik.frontend.rule=Host:192.227.93.136;Path:/logstash'
-        - 'traefik.backend.loadbalancer.stickiness=true'
+        - "traefik.port=5044"
+        - "traefik.frontend.rule=Host:192.227.93.136;Path:/logstash"
+        - "traefik.backend.loadbalancer.stickiness=true"
+        - "traefik.backend=logstash"
+        - "traefik.enable=true"
     configs:
       - source: ls_config
         target: /usr/share/logstash/pipeline/logstash.conf
@@ -58,14 +60,27 @@ services:
     deploy:
       replicas: 2
       labels:
-        - 'traefik.port=5601'
-        - 'traefik.frontend.rule=Host:192.227.93.136'
-        - 'traefik.backend.loadbalancer.stickiness=true'
+        - "traefik.port=5601"
+        - "traefik.frontend.rule=Host:192.227.93.136"
+        - "traefik.backend.loadbalancer.stickiness=true"
+        - "traefik.backend=kibana"
+        - "traefik.enable=true"
 
   traefik:
     image: traefik:v1.7.8
     hostname: "{{.Node.Hostname}}-traefik"
-    command: --docker --docker.swarmmode --docker.domain=192.227.93.136 --docker.watch --logLevel=DEBUG --web
+    command: 
+      - --docker 
+      - --docker.swarmmode 
+      - --docker.domain="192.227.93.136"
+      - --docker.watch 
+      - --logLevel=DEBUG 
+      - --network=elastic 
+      - --api 
+      - --entrypoint="Name:http Address:80"
+      - --defaultentrypoints="http"
+      - --docker.exposedbydefault=false
+      - --accessLog
     networks:
       - elastic
     ports:
@@ -76,6 +91,11 @@ services:
       - type: bind
         source: /var/run/docker.sock
         target: /var/run/docker.sock
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - "node.role == manager"
 
 networks:
     elastic:
