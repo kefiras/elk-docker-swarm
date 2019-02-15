@@ -38,7 +38,7 @@ services:
       replicas: 2
       labels:
         - "traefik.port=5044"
-        - "traefik.frontend.rule=Host:192.227.93.136;Path:/logstash"
+        - "traefik.frontend.rule=Host:home.web-sec.net;Path:/logstash"
         - "traefik.backend.loadbalancer.stickiness=true"
         - "traefik.backend=logstash"
         - "traefik.enable=true"
@@ -63,7 +63,7 @@ services:
       replicas: 2
       labels:
         - "traefik.port=5601"
-        - "traefik.frontend.rule=Host:192.227.93.136"
+        - "traefik.frontend.rule=Host:home.web-sec.net"
         - "traefik.backend.loadbalancer.stickiness=true"
         - "traefik.backend=kibana"
         - "traefik.enable=true"
@@ -73,17 +73,17 @@ services:
     image: traefik:v1.7.8
     hostname: "{{.Node.Hostname}}-traefik"
     command: 
-      - --docker 
-      - --docker.swarmmode 
-      - --docker.domain="192.227.93.136"
-      - --docker.watch 
-      - --logLevel=DEBUG 
-      - --network=elastic 
-      - --api 
-      - --entrypoint="Name:http Address:80"
-      - --defaultentrypoints="http"
-      - --docker.exposedbydefault=false
-      - --accessLog
+      - "--docker"
+      - "--docker.swarmmode"
+      - "--docker.domain=home.web-sec.net"
+      - "--docker.watch" 
+      - "--logLevel=DEBUG"
+      - "--docker.network=elastic"
+      - "--api"
+      - "--entrypoints=Name:http Address::80"
+      - "--defaultentrypoints=http"
+      - "--docker.exposedbydefault=false"
+      - "--accessLog"
     networks:
       - elastic
     ports:

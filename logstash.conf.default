@@ -9,7 +9,7 @@ filter {}
 output {
   elasticsearch {
     hosts => ["elasticsearch:9200"]
-    user => "elastic"
-    password => "changeme"
+    user => "${ELASTICSEARCH_USERNAME}"
+    password => "${ELASTICSEARCH_PASSWORD}"
   }
 }
