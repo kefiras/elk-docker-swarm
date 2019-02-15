@@ -38,7 +38,7 @@ services:
       replicas: 2
       labels:
         - "traefik.port=5044"
-        - "traefik.frontend.rule=Host:home.web-sec.net;Path:/logstash"
+        - "traefik.frontend.rule=Host:${DOMAIN};Path:/logstash"
         - "traefik.backend.loadbalancer.stickiness=true"
         - "traefik.backend=logstash"
         - "traefik.enable=true"
@@ -63,7 +63,7 @@ services:
       replicas: 2
       labels:
         - "traefik.port=5601"
-        - "traefik.frontend.rule=Host:home.web-sec.net"
+        - "traefik.frontend.rule=Host:${DOMAIN}"
         - "traefik.backend.loadbalancer.stickiness=true"
         - "traefik.backend=kibana"
         - "traefik.enable=true"
@@ -75,7 +75,7 @@ services:
     command: 
       - "--docker"
       - "--docker.swarmmode"
-      - "--docker.domain=home.web-sec.net"
+      - "--docker.domain=${DOMAIN}"
       - "--docker.watch" 
       - "--logLevel=DEBUG"
       - "--docker.network=elastic"
